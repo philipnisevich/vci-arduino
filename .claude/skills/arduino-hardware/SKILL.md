@@ -1,27 +1,25 @@
 ---
 name: arduino-hardware
-description: "Use whenever the user wants to build, continue, or debug an Arduino/Arduino-compatible hardware project, wants to set up/detect their board, or says the detected board is wrong (e.g. a Pro Micro clone misidentified as a Leonardo) — any board, not a specific one. Triggers: Arduino, arduino-cli, sketch/.ino, breadboard, wiring, pinout, GPIO, sensor, actuator, module, display, upload/flash to board, 'my Arduino isn't working', 'let's build a project with my board', 'set up my Arduino board', 'that's not the right board'. The people using this are assumed to be non-technical about hardware — explain things plainly, never assume they know pin voltages or how to avoid frying a board. Never assume which board they have — always detect it via the setup flow below before assuming project work can proceed."
+description: "Use whenever the user wants to build, continue, or debug an Arduino/Arduino-compatible hardware project, wants to set up/detect their board, or says the detected board is wrong (e.g. a Pro Micro clone misidentified as a Leonardo) — any board, not a specific one. Triggers: Arduino, arduino-cli, sketch/.ino, breadboard, wiring, pinout, GPIO, sensor, actuator, module, display, upload/flash to board, 'my Arduino isn't working', 'let's build a project with my board', 'set up my Arduino board', 'that's not the right board'. The people using this are assumed to be non-technical about hardware — explain things plainly, never assume they know pin voltages or how to avoid frying a board. Never assume which board they have — always run setup (below) before assuming project work can proceed."
 ---
 
 # Arduino Hardware Skill
 
-Board-agnostic guide for Arduino hardware projects, with three modes:
+Board-agnostic guide for Arduino hardware projects, with two modes:
 
-- **`/arduino-hardware setup`** — one-time (or re-run-on-demand) board detection that builds a reusable context document.
-- **`/arduino-hardware specify <board name, product link, or context>`** — the user tells you what board they actually have, overriding/correcting `arduino-cli`'s USB-ID guess. Needed because auto-detection is genuinely unreliable for some boards — e.g. many **Pro Micro** clones intentionally reuse the **Arduino Leonardo**'s USB VID/PID so generic drivers recognize them, so `board list` will confidently report the wrong board.
+- **`/arduino-hardware setup [board name, product link, or context]`** — one-time (or re-run-on-demand) board detection that builds a reusable context document. The link/name/context argument is **optional**: run it bare and it just detects the connected board and reads its data via `arduino-cli` as normal. Add a link or board name when you already know what it is or when `arduino-cli`'s USB-ID guess turns out wrong (e.g. many **Pro Micro** clones intentionally reuse the **Arduino Leonardo**'s USB VID/PID, so auto-detection will confidently report the wrong board) — that info then takes priority over the auto-detected guess.
 - **Project work** (default, auto-triggered by general Arduino conversation) — compiling/uploading, clarifying which module/component is meant whenever one comes up, and keeping wiring grounded in real specs.
 
 The user is explicitly non-technical about electronics. Never skip a step, question, or safety explanation to "save time" — that's the point of this skill.
 
 ## What to do when invoked
 
-- User typed `/arduino-hardware setup`, or explicitly asked to set up / detect / re-detect / connect their board → **Setup mode**, stop there.
-- User typed `/arduino-hardware specify ...`, or said the detected/assumed board is wrong and told you what it actually is → **Specify mode**, stop there.
+- User typed `/arduino-hardware setup` (with or without a trailing board name/link/context), or explicitly asked to set up / detect / re-detect / connect their board, or said the detected/assumed board is wrong and told you what it actually is → **Setup mode**, stop there.
 - Otherwise → general project conversation, go to **Project work** below.
 
 ---
 
-## Setup mode (`/arduino-hardware setup`)
+## Setup mode (`/arduino-hardware setup [board name, product link, or context]`)
 
 ### Step 1 — Make sure `arduino-cli` is installed
 
@@ -45,7 +43,20 @@ arduino-cli core update-index
 
 Explain in one sentence what `arduino-cli` is ("the official command-line tool that compiles your code and sends it to the board") — don't assume the user knows.
 
-### Step 2 — Ask if the board is plugged in
+### Step 2 — If a board name/link/context was given, resolve it now
+
+This step only applies if the user passed something after `setup` (or told you elsewhere in conversation what board they actually have) — **skip straight to Step 3 if they didn't; that's the normal case and nothing here is required.**
+
+When something was given:
+- **Link:** `WebFetch` it to identify the exact board/model.
+- **Name:** `arduino-cli board search <name>` to find matching FQBNs.
+- **Ambiguous** (e.g. multiple Pro Micro variants — 3.3V/8MHz vs 5V/16MHz — which have different clock speeds and matter for timing-sensitive code): ask the user to pick via `AskUserQuestion` rather than guessing.
+
+State the resolved board and FQBN in plain language and confirm it's right — e.g. "So this is a SparkFun Pro Micro (5V/16MHz), FQBN `SparkFun:avr:promicro16` — that sound right?" — before continuing. This resolved FQBN now takes priority over whatever `arduino-cli` guesses from the USB connection in Step 4, and the resulting doc will be marked as user-confirmed rather than auto-detected (Step 5).
+
+(Third-party boards like SparkFun's may need their board manager URL added first — check `arduino-cli core search <name>` and, if nothing turns up, ask the user for the board's board-manager JSON URL from its product page/docs, or add it via `arduino-cli config add board_manager.additional_urls <url>`.)
+
+### Step 3 — Ask if the board is plugged in
 
 Before running any detection command, ask using `AskUserQuestion`:
 
@@ -55,16 +66,17 @@ with options along the lines of:
 - **Yes, it's plugged in**
 - **No, I can't plug it in right now**
 
-- **If "No":** explain that detection needs a live USB connection, and that you'll pick this back up once it's connected. Ask them to let you know when it's plugged in, then stop and wait for their reply — don't guess a board or proceed further this turn.
-- **If "Yes":** continue to Step 3.
+- **If "No":** explain that pulling the board's real build data needs a live USB connection, and that you'll pick this back up once it's connected. If Step 2 already resolved which board this is, say so — that part's done, you just need it connected for the rest. Ask them to let you know when it's plugged in, then stop and wait for their reply — don't guess further or proceed this turn.
+- **If "Yes":** continue to Step 4.
 
-### Step 3 — Detect the board and build its context document
+### Step 4 — Detect the board
 
 ```bash
 arduino-cli board list
 ```
 
-- If a board is listed with a real **FQBN** (e.g. `arduino:renesas_uno:unor4wifi`), that's your board.
+- If Step 2 already resolved an FQBN from user-supplied context, use that as authoritative — if it conflicts with what `board list` guesses from the USB ID, go with the user-supplied one, not the auto-detected one.
+- Otherwise, if a board is listed with a real **FQBN** (e.g. `arduino:renesas_uno:unor4wifi`), that's your board.
 - If it shows **"Unknown"** with only a VID/PID, the matching core isn't installed yet:
   ```bash
   arduino-cli board search <keyword, e.g. the board name if the user knows it>
@@ -72,12 +84,16 @@ arduino-cli board list
   ```
 - If nothing shows up at all: not a code problem — usually a charge-only USB cable with no data lines, or it isn't fully seated. Explain that in plain language before troubleshooting further, and re-run `board list` after they check the cable.
 
-`board list` is a best guess from USB vendor/product IDs, not a certainty — some clone boards (most notably many **Pro Micro** clones) intentionally share IDs with a *different* official board (usually **Leonardo**) purely so generic drivers recognize them. If the user says the detected board doesn't match what they actually bought, don't argue with them or force the auto-detected FQBN — point them to `/arduino-hardware specify` instead.
+`board list` is a best guess from USB vendor/product IDs, not a certainty — some clone boards (most notably many **Pro Micro** clones) intentionally share IDs with a *different* official board (usually **Leonardo**) purely so generic drivers recognize them. If the user says the detected board doesn't match what they actually bought, don't argue with them or force the auto-detected FQBN — ask them for the real board name/link (or have them re-run `/arduino-hardware setup <name or link>`), which routes back to Step 2.
+
+Install the core for the resolved FQBN if it isn't installed yet (`arduino-cli core install <platform id>`).
+
+### Step 5 — Build the context document
 
 Once you have the FQBN, check `references/boards/` for a file named after it (colons/slashes → underscores, e.g. `arduino:renesas_uno:unor4wifi` → `arduino_renesas_uno_unor4wifi.md`).
 
-- **Exists already:** tell the user this board's already set up, confirm the current **port** with a fresh `arduino-cli board list` (ports can change between sessions), and stop — no need to regenerate build data that hasn't changed.
-- **Doesn't exist:** generate it now, from real CLI output, not from memory or assumption:
+- **Exists already, and this run didn't override it with new user-supplied context:** tell the user this board's already set up, confirm the current **port** with a fresh `arduino-cli board list` (ports can change between sessions), and stop — no need to regenerate build data that hasn't changed.
+- **Doesn't exist, or needs to be (re)written because Step 2 resolved/overrode the board:** generate it now, from real CLI output, not from memory or assumption:
   ```bash
   arduino-cli board details -b <fqbn> --json
   arduino-cli compile --fqbn <fqbn> --show-properties <any-sketch-dir>
@@ -90,52 +106,16 @@ Once you have the FQBN, check `references/boards/` for a file named after it (co
   1. **CLI-sourced build data** — FQBN, MCU/arch, clock speed, memory-relevant defines, upload protocol/tool, upload size limits, and the exact `compile`/`upload` command for this board. All pulled straight from the commands above.
   2. **Electrical specs (web-sourced)** — operating/logic voltage, per-pin current limits, and pin map (digital/analog/PWM/I2C/SPI/etc). The CLI does **not** expose this — look it up (`WebSearch`/`WebFetch` for "`<board name>` pinout specifications") and cite what you found. This section is what wiring work depends on later, so don't skip it just because the CLI already gave you plenty of data — voltage/current info is safety-critical and comes from a different source.
 
+  If Step 2 resolved/overrode the board from user-supplied context, add a line at the very top of the doc:
+  > **Confirmed by user, not auto-detected.** `arduino-cli board list` reports this board's USB ID as `<whatever it showed, e.g. "Unknown" or "Arduino Leonardo">` — that detection is wrong/ambiguous for this specific board. This doc is for the real board: `<real name>`.
+
+  Keep that note permanently — it's what stops a future session from trusting the CLI's guess again. And if `references/boards/` already has a doc filed under the *wrong*, previously auto-detected FQBN from an earlier session (e.g. `arduino_avr_leonardo.md` for what's actually a Pro Micro), don't leave it sitting there to be picked up by mistake — tell the user it exists and was likely a misdetection, and delete it (or fold a note into it pointing at the corrected file).
+
 This is how the skill's board knowledge grows over time — every new board encountered gets written back here so future setup runs on the same board just reuse it.
-
-### Step 4 — Confirm and hand off
-
-Summarize for the user in plain language: what board was detected, its logic voltage, and its current port. Let them know they're set up and can go ahead and describe the project they want to build.
-
----
-
-## Specify mode (`/arduino-hardware specify <board name, product link, or context>`)
-
-Use this whenever `arduino-cli`'s auto-detection doesn't match what the user actually has. This is a real, common failure mode — not hypothetical: boards like SparkFun/generic **Pro Micro** clones deliberately reuse the **Arduino Leonardo**'s USB VID/PID so they boot with existing drivers, so `board list` will confidently report "Leonardo" for a board that behaves differently enough (different pin count, no onboard LED on the same pin, etc.) that a Leonardo-targeted compile can produce working-but-subtly-wrong code. The user's own knowledge of what they bought overrides the CLI's guess here.
-
-### Step 1 — Resolve what the user actually gave you
-
-Whatever follows `specify` — a board name, a product link, or free-text description (e.g. "SparkFun Pro Micro 5V/16MHz", or a link to the exact listing):
-
-- **Link:** `WebFetch` it to identify the exact board/model.
-- **Name:** `arduino-cli board search <name>` to find matching FQBNs.
-- **Ambiguous** (e.g. multiple Pro Micro variants — 3.3V/8MHz vs 5V/16MHz — which have different clock speeds and matter for timing-sensitive code): ask the user to pick via `AskUserQuestion` rather than guessing.
-
-### Step 2 — Confirm before writing anything
-
-State the resolved board and FQBN in plain language and confirm it's right — e.g. "So this is a SparkFun Pro Micro (5V/16MHz), FQBN `SparkFun:avr:promicro16` — that sound right?" — before touching any files.
-
-### Step 3 — Install the core if needed
-
-```bash
-arduino-cli core install <platform id>
-```
-(Third-party boards like SparkFun's may need their board manager URL added first — check `arduino-cli core search <name>` and, if nothing turns up, ask the user for the board's board-manager JSON URL from its product page/docs, or add it via `arduino-cli config add board_manager.additional_urls <url>`.)
-
-### Step 4 — Build the context document, and mark it as user-confirmed
-
-Same as Setup mode Step 3: pull `arduino-cli board details -b <fqbn> --json` and `arduino-cli compile --fqbn <fqbn> --show-properties <sketch-dir>` for CLI-sourced data, plus a web-sourced electrical-specs section, into `references/boards/<fqbn_safe>.md`. But add a line at the very top of the doc:
-
-> **Confirmed by user, not auto-detected.** `arduino-cli board list` reports this board's USB ID as `<whatever it showed, e.g. "Unknown" or "Arduino Leonardo">` — that detection is wrong/ambiguous for this specific board. This doc is for the real board: `<real name>`.
-
-Keep that note permanently — it's what stops a future session from trusting the CLI's guess again.
-
-### Step 5 — Clean up a stale wrong-board doc, if one exists
-
-If `references/boards/` already has a doc filed under the *auto-detected* (wrong) FQBN from an earlier session — e.g. `arduino_avr_leonardo.md` for what's actually a Pro Micro — don't leave it sitting there to be picked up by mistake later. Tell the user it exists and was likely a misdetection, and delete it (or fold a note into it pointing at the corrected file) rather than silently leaving two conflicting docs around.
 
 ### Step 6 — Confirm and hand off
 
-Same as Setup mode Step 4.
+Summarize for the user in plain language: what board was detected/confirmed, its logic voltage, and its current port. Let them know they're set up and can go ahead and describe the project they want to build.
 
 ---
 

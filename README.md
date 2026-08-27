@@ -6,12 +6,11 @@ This repo currently houses the **arduino-hardware** Claude Code skill: a board-a
 
 ## Modes
 
-The skill has three modes, dispatched from `SKILL.md`'s "What to do when invoked" section based on how it's triggered:
+The skill has two modes, dispatched from `SKILL.md`'s "What to do when invoked" section based on how it's triggered:
 
 | Mode | Trigger | Purpose |
 |---|---|---|
-| **Setup** | `/arduino-hardware setup` | One-time (or re-run-on-demand) board detection. Confirms the board is plugged in, runs `arduino-cli board list`/`board details`/`compile --show-properties`, and writes a context document for that board. |
-| **Specify** | `/arduino-hardware specify <board name, product link, or context>` | Manual override when `arduino-cli`'s USB-ID auto-detection is wrong or ambiguous (e.g. a Pro Micro clone reporting itself as a Leonardo). User-supplied info replaces the guess; the resulting doc is marked "confirmed by user, not auto-detected." |
+| **Setup** | `/arduino-hardware setup [board name, product link, or context]` | One-time (or re-run-on-demand) board detection. Confirms the board is plugged in, runs `arduino-cli board list`/`board details`/`compile --show-properties`, and writes a context document for that board. The board name/link/context argument is **optional** — run it bare and it just reads whatever's plugged in. Pass one when you already know the board, or when `arduino-cli`'s USB-ID guess is wrong or ambiguous (e.g. a Pro Micro clone reporting itself as a Leonardo); that info then overrides the auto-detected guess, and the resulting doc is marked "confirmed by user, not auto-detected." |
 | **Project work** (default) | Any other Arduino-related conversation | Ongoing project help: confirms setup has run, clarifies the exact module/component whenever one is mentioned (not an upfront batch question), compile/upload workflow, wiring/pinout display before touching a new component, and safety rules. |
 
 ## Why detection needs two sources, not one
@@ -26,7 +25,7 @@ So every board context document has two sections, sourced differently, and both 
 
 ## Why detection can be wrong
 
-`arduino-cli board list` identifies boards by USB vendor/product ID. Some clone boards deliberately reuse another official board's ID so generic OS drivers recognize them — the most common case is **Pro Micro clones reporting as an Arduino Leonardo**. Auto-detection is a best guess, not a certainty. Specify mode exists specifically to let the user's own knowledge correct it, and to leave a permanent note in the context doc so a future session doesn't get fooled back to the same wrong guess.
+`arduino-cli board list` identifies boards by USB vendor/product ID. Some clone boards deliberately reuse another official board's ID so generic OS drivers recognize them — the most common case is **Pro Micro clones reporting as an Arduino Leonardo**. Auto-detection is a best guess, not a certainty. Setup mode's optional board name/link/context argument exists specifically to let the user's own knowledge correct it, and to leave a permanent note in the context doc so a future session doesn't get fooled back to the same wrong guess.
 
 ## File layout
 
@@ -34,7 +33,7 @@ So every board context document has two sections, sourced differently, and both 
 vci-arduino/
 ├── README.md                                  # this file
 └── .claude/skills/arduino-hardware/
-    ├── SKILL.md                               # the skill itself — all three modes' instructions
+    ├── SKILL.md                               # the skill itself — both modes' instructions
     └── references/
         ├── cli-cheatsheet.md                  # arduino-cli command reference (setup, board/core discovery, sketches, upload, monitor, libraries)
         ├── wiring-safety.md                   # beginner-safe wiring rules
@@ -42,7 +41,7 @@ vci-arduino/
             └── <fqbn_with_underscores>.md      # one per board ever detected/specified — CLI-sourced + web-sourced sections
 ```
 
-Board context docs are named after their FQBN with `:`/`/` replaced by `_`, e.g. `arduino:renesas_uno:unor4wifi` → `arduino_renesas_uno_unor4wifi.md`. This directory is a growing cache: every new board encountered (via Setup or Specify mode) gets written back here, so a board only needs to go through full detection/lookup once.
+Board context docs are named after their FQBN with `:`/`/` replaced by `_`, e.g. `arduino:renesas_uno:unor4wifi` → `arduino_renesas_uno_unor4wifi.md`. This directory is a growing cache: every new board encountered via setup (auto-detected or user-specified) gets written back here, so a board only needs to go through full detection/lookup once.
 
 ## Maintenance
 
