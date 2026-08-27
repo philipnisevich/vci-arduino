@@ -1,8 +1,8 @@
-# arduino-hardware skill
+# vci-arduino
 
-Board-agnostic Claude Code skill for Arduino/Arduino-compatible hardware projects. Written for non-technical users — it never assumes board specs, pin voltages, or which module someone means; it detects, confirms, and asks.
+This repo currently houses the **arduino-hardware** Claude Code skill: a board-agnostic skill for Arduino/Arduino-compatible hardware projects, written for non-technical users — it never assumes board specs, pin voltages, or which module someone means; it detects, confirms, and asks.
 
-> This README documents what the skill does and how it's organized, for anyone (human or Claude) editing it. Keep it in sync — update it whenever `SKILL.md` or the reference files change, in the same commit.
+> This README documents what the skill does and how it's organized, for anyone (human or Claude) editing it. Keep it in sync — update it whenever `.claude/skills/arduino-hardware/SKILL.md` or its reference files change, in the same commit.
 
 ## Modes
 
@@ -31,14 +31,15 @@ So every board context document has two sections, sourced differently, and both 
 ## File layout
 
 ```
-arduino-hardware/
-├── SKILL.md                          # the skill itself — all three modes' instructions
-├── README.md                         # this file
-└── references/
-    ├── cli-cheatsheet.md             # arduino-cli command reference (setup, board/core discovery, sketches, upload, monitor, libraries)
-    ├── wiring-safety.md              # beginner-safe wiring rules
-    └── boards/
-        └── <fqbn_with_underscores>.md   # one per board ever detected/specified — CLI-sourced + web-sourced sections
+vci-arduino/
+├── README.md                                  # this file
+└── .claude/skills/arduino-hardware/
+    ├── SKILL.md                               # the skill itself — all three modes' instructions
+    └── references/
+        ├── cli-cheatsheet.md                  # arduino-cli command reference (setup, board/core discovery, sketches, upload, monitor, libraries)
+        ├── wiring-safety.md                   # beginner-safe wiring rules
+        └── boards/
+            └── <fqbn_with_underscores>.md      # one per board ever detected/specified — CLI-sourced + web-sourced sections
 ```
 
 Board context docs are named after their FQBN with `:`/`/` replaced by `_`, e.g. `arduino:renesas_uno:unor4wifi` → `arduino_renesas_uno_unor4wifi.md`. This directory is a growing cache: every new board encountered (via Setup or Specify mode) gets written back here, so a board only needs to go through full detection/lookup once.
