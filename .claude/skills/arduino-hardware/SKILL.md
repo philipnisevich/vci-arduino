@@ -1,15 +1,13 @@
 ---
 name: arduino-hardware
-description: "Use whenever the user is working with an Arduino or Arduino-compatible board — starting a new sketch, wiring a sensor/component, compiling or uploading code, or asking what board they have. Triggers: Arduino, arduino-cli, sketch/.ino, UNO R4 WiFi, ELEGOO kit, breadboard, wiring, pinout, GPIO, sensor, actuator, upload/flash to board, 'my Arduino isn't working'. The people using this are assumed to be non-technical about hardware — explain things plainly, never assume they know pin voltages or how to avoid frying a board."
+description: "Use whenever the user wants to start, continue, or debug an Arduino/Arduino-compatible hardware project — any board, not a specific one. Triggers: Arduino, arduino-cli, sketch/.ino, breadboard, wiring, pinout, GPIO, sensor, actuator, module, upload/flash to board, 'my Arduino isn't working', 'let's build a project with my board'. The people using this are assumed to be non-technical about hardware — explain things plainly, never assume they know pin voltages or how to avoid frying a board. Never assume which board they have — always detect it."
 ---
 
 # Arduino Hardware Skill
 
-Guides Claude through any Arduino hardware project end-to-end: making sure the tooling exists, identifying the exact board in front of the user, teaching Claude (and the user) that board's specs, and then keeping wiring safe and pinouts visible throughout the project.
+Board-agnostic guide for Arduino hardware projects: confirm the board is connected before doing anything board-specific, pull everything `arduino-cli` can tell you about it into a reusable context document, find out what modules/components the project needs, then keep compiling, wiring, and safety grounded in real data instead of assumptions.
 
-**Default board:** this repo's primary kit is the **ELEGOO UNO R4 WiFi Super Starter Kit**, which is an official **Arduino UNO R4 WiFi** (FQBN `arduino:renesas_uno:unor4wifi`). Treat this as the assumed board unless detection (Step 1) says otherwise. Full specs: [`references/boards/arduino_renesas_uno_unor4wifi.md`](references/boards/arduino_renesas_uno_unor4wifi.md).
-
-The user is explicitly non-technical about electronics. Never skip the safety/spec explanation steps to "save time" — that explanation is the point of this skill.
+The user is explicitly non-technical about electronics. Never skip a step to "save time" — the questions and explanations are the point of this skill.
 
 ## Step 0 — Make sure `arduino-cli` is installed
 
@@ -33,38 +31,75 @@ arduino-cli core update-index
 
 Explain to the user in one sentence what `arduino-cli` is ("the official command-line tool that compiles your code and sends it to the board") — don't assume they know.
 
-## Step 1 — Identify the board
+## Step 1 — Before touching anything board-specific, ask if it's plugged in
 
-Always detect rather than assume, even though the default is the UNO R4 WiFi — the user may plug in something else later.
+The **first thing** to do when a user wants to start a new hardware project (before writing any board-specific code, before guessing what board they have) is ask, using `AskUserQuestion`:
+
+> "Is your Arduino board plugged into this computer via USB right now?"
+
+with options along the lines of:
+- **Yes, it's plugged in**
+- **No, I can't plug it in right now**
+
+Don't guess the board or skip this — detection requires a live USB connection, and guessing wrong leads to wrong compile commands and wrong pin/voltage info later.
+
+- **If "No":** that's fine. Say you'll need it plugged in before you can detect the exact board, pull its real specs, and give correct compile commands — everything board-specific waits until then. You can still discuss the project idea and modules in general terms, but don't state specific pin numbers, voltages, or FQBNs until Step 2 has actually run. Ask the user to let you know once it's connected, then stop and wait for their reply — don't proceed further in this turn.
+- **If "Yes":** go straight to Step 2.
+
+## Step 2 — Detect the board and build its context document
 
 ```bash
 arduino-cli board list
 ```
 
 - If a board is listed with a real **FQBN** (e.g. `arduino:renesas_uno:unor4wifi`), that's your board.
-- If it shows **"Unknown"** with only a VID/PID, the matching core isn't installed yet. Search by name and install:
+- If it shows **"Unknown"** with only a VID/PID, the matching core isn't installed yet:
   ```bash
-  arduino-cli board search <keyword, e.g. "uno r4">
+  arduino-cli board search <keyword, e.g. the board name if the user knows it>
   arduino-cli core install <platform id, e.g. "arduino:renesas_uno">
   ```
-- If nothing shows up at all: the board likely isn't plugged in via USB yet, or needs a driver/cable (common issue: charge-only USB cables have no data lines). Tell the user in plain language to check the cable and connection before anything else.
-- Once you have the FQBN, confirm details:
+- If nothing shows up at all: the board isn't being detected — often a charge-only USB cable with no data lines, or it's not plugged in all the way. Explain this in plain language before troubleshooting further.
+
+### Pull everything the CLI knows, into a context document
+
+Once you have the FQBN, check `references/boards/` for a file named after it (colons/slashes → underscores, e.g. `arduino:renesas_uno:unor4wifi` → `arduino_renesas_uno_unor4wifi.md`).
+
+- **Exists already:** reuse it for build properties (those don't change), but always re-run `arduino-cli board list` for the current **port** — it can change between sessions/USB ports and is never safe to reuse from a stale doc.
+- **Doesn't exist:** generate it now, from real CLI output, not from memory or assumption:
   ```bash
-  arduino-cli board details -b <fqbn>
+  arduino-cli board details -b <fqbn> --json
+  arduino-cli compile --fqbn <fqbn> --show-properties <any-sketch-dir>
   ```
+  (If no sketch exists yet for this project, `arduino-cli sketch new` a throwaway one first just to run `--show-properties` against — `--show-properties` needs a sketch path even though it doesn't actually compile anything meaningful for this purpose.)
 
-## Step 2 — Load or build that board's spec sheet, then show it to the user
+  `--show-properties` is the important one — it dumps the real MCU, clock speed, compiler flags/defines, toolchain paths, and upload tool/protocol straight from the installed core's own build config. This is exactly what compile commands for this board are built from, so it belongs in the doc verbatim (trimmed to the parts that matter), not paraphrased.
 
-Check `references/boards/` for a file matching the FQBN (slashes/colons → underscores, e.g. `arduino:renesas_uno:unor4wifi` → `arduino_renesas_uno_unor4wifi.md`).
+  Write the result to `references/boards/<fqbn_safe>.md` with two sections:
+  1. **CLI-sourced build data** — FQBN, MCU/arch, clock speed, memory-relevant defines, upload protocol/tool, and the exact `compile`/`upload` command for this board. All pulled straight from the commands above.
+  2. **Electrical specs (web-sourced)** — operating/logic voltage, per-pin current limits, and pin map (digital/analog/PWM/I2C/SPI/etc). The CLI does **not** expose this — look it up (`WebSearch`/`WebFetch` for "`<board name>` pinout specifications") and cite what you found. This section is what Step 5 (wiring) depends on, so don't skip it just because the CLI already gave you plenty of data — voltage/current info is safety-critical and comes from a different source.
 
-- **Exists** (true for the default UNO R4 WiFi): read it and summarize the key specs for the user in plain language before writing any code — operating voltage, logic level, memory, and anything that could get damaged by a wiring mistake (e.g. this board's `5V` logic on the main headers vs `3.3V` on the ESP32-S3 side).
-- **Doesn't exist** (a new/different board): `arduino-cli board details -b <fqbn>` only gives package/programmer metadata, not electrical specs or pin maps. Use `WebSearch`/`WebFetch` for "`<board name>` pinout specifications", summarize the same categories, and **write a new file** into `references/boards/` following the format of `arduino_renesas_uno_unor4wifi.md` so the skill knows this board next time without re-searching. This is how the skill's board knowledge grows over time — always contribute back.
+  This is how the skill's board knowledge grows over time — every new board encountered gets written back here so future projects on the same board skip straight to reuse.
 
-Never start wiring or coding without having stated: operating/logic voltage, max current per pin, and which pins are special-purpose (PWM, ADC, I2C, SPI, DAC, etc.).
+Before writing any project code, summarize the key facts for the user in plain language: what board it is, its logic voltage, and anything that could get damaged by a wiring mistake.
 
-## Step 3 — Compile / upload workflow
+## Step 3 — Ask what modules/components the project uses
 
-See [`references/cli-cheatsheet.md`](references/cli-cheatsheet.md) for the full command reference (sketches, libraries, monitor). Core loop:
+Once the board is confirmed, ask (via `AskUserQuestion`, multi-select) what kind of modules/components this project involves, e.g.:
+- WiFi / Bluetooth
+- Sensors (temperature, motion, light, distance, etc.)
+- Display (LCD, OLED, LED matrix)
+- Motors / servos
+- Relays / high-power switching
+- Audio (speaker, buzzer, mic)
+- Not sure yet / none of these
+
+The tool automatically offers an "Other" choice for free text — tell the user in the question that they can use it to paste a product link or describe something not listed, if what they're using isn't one of the categories above.
+
+For each module named or linked, look up its datasheet/pinout/voltage the same way as the board itself (Step 2's "electrical specs" approach) before it's wired in — this feeds directly into Step 5.
+
+## Step 4 — Compile / upload workflow
+
+See [`references/cli-cheatsheet.md`](references/cli-cheatsheet.md) for the full command reference (sketches, libraries, monitor). Core loop, using the FQBN and port from Step 2 (re-fetch the port fresh each time, never reuse an old one):
 
 ```bash
 arduino-cli sketch new <name>                                   # scaffold a new sketch
@@ -74,19 +109,17 @@ arduino-cli compile --upload -p <port> --fqbn <fqbn> <sketch-dir>  # both in one
 arduino-cli monitor -p <port> -c baudrate=115200                # read Serial output
 ```
 
-Get `<port>` from `arduino-cli board list` each time — it can change between USB plug-ins/reboots, especially on macOS/Linux. Don't hardcode it.
-
 If compile fails on a missing library:
 ```bash
 arduino-cli lib search <keyword>
 arduino-cli lib install "<Library Name>"
 ```
 
-## Step 4 — Always show pinout / wiring info before touching a new component
+## Step 5 — Always show pinout / wiring info before touching a new component
 
 Every time a project introduces a new sensor, actuator, or module, before telling the user to connect a single wire:
 
-1. Print the relevant pin table from the board's reference file (which pins are free, which are PWM/analog/I2C/etc., voltage).
+1. Print the relevant pin table from the board's context doc (which pins are free, which are PWM/analog/I2C/etc., voltage) plus the module's own pinout from Step 3.
 2. Print a plain-text wiring map, one line per wire, in the form `<component pin> → <board pin>` — e.g.:
    ```
    DHT22 VCC  → 5V
@@ -98,11 +131,11 @@ Every time a project introduces a new sensor, actuator, or module, before tellin
 
 Never wire anything before this step, even if the user seems experienced — assume they aren't.
 
-## Step 5 — Safety rules (always in effect)
+## Step 6 — Safety rules (always in effect)
 
 See [`references/wiring-safety.md`](references/wiring-safety.md) for the full list. The non-negotiables:
 
 - Never connect anything while the board is powered unless the user explicitly knows what "hot-plugging" risk means for that specific part.
 - Double-check polarity (VCC/GND) and voltage rating *before* power is applied, not after something smells hot.
-- Respect per-pin and total current limits (see the board's reference file) — don't drive motors/LEDs directly off a GPIO pin without a driver/transistor/resistor as appropriate.
+- Respect per-pin and total current limits (see the board's context doc) — don't drive motors/LEDs directly off a GPIO pin without a driver/transistor/resistor as appropriate.
 - If a board or component gets hot, smells burnt, or shows smoke: disconnect power immediately and stop — don't troubleshoot live.
