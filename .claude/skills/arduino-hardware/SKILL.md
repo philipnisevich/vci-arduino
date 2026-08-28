@@ -141,15 +141,19 @@ Once the exact module is identified, look up its datasheet/pinout/voltage (`WebS
 
 ### Step 3 — Compile / upload workflow
 
+**Sketches live inside the current project directory — never elsewhere.** Before creating or editing a sketch, confirm the working directory with `pwd`, and put the sketch under it (e.g. `./<sketch-name>/<sketch-name>.ino`) rather than in a temp dir, scratchpad, home directory, or any path outside the project. Don't let a sketch end up scattered somewhere unrelated to where the user is actually working — every `arduino-cli` command below should take a `<sketch-dir>` that resolves inside the project directory. If a sketch already exists in the project (check before creating a new one), edit it in place instead of scaffolding a second copy elsewhere.
+
 See [`references/cli-cheatsheet.md`](references/cli-cheatsheet.md) for the full command reference (sketches, libraries, monitor). Core loop, using the FQBN and port from the board's context doc (re-fetch the port fresh each time with `arduino-cli board list` — never reuse an old one, it can change between sessions):
 
 ```bash
-arduino-cli sketch new <name>                                   # scaffold a new sketch
+arduino-cli sketch new <name>                                   # scaffold a new sketch, inside the project dir
 arduino-cli compile --fqbn <fqbn> <sketch-dir>                  # compile only
 arduino-cli upload -p <port> --fqbn <fqbn> <sketch-dir>         # upload only
 arduino-cli compile --upload -p <port> --fqbn <fqbn> <sketch-dir>  # both in one shot
 arduino-cli monitor -p <port> -c baudrate=115200                # read Serial output
 ```
+
+**Flash after every change, every time — don't just compile and stop.** Whenever the sketch is created or edited in response to a user prompt, the turn isn't done until it's been compiled *and uploaded* to the board (`compile --upload`, or `compile` then `upload`). Don't wait for a separate "flash it" request — that's the default expectation for every prompt that touches code, not an extra step. The only exception is when the board genuinely isn't available (see Step 1) — say so plainly rather than silently skipping the upload.
 
 If compile fails on a missing library:
 ```bash

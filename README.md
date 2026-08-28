@@ -11,7 +11,7 @@ The skill has two modes, dispatched from `SKILL.md`'s "What to do when invoked" 
 | Mode | Trigger | Purpose |
 |---|---|---|
 | **Setup** | `/arduino-hardware setup [board name, product link, or context]` | One-time (or re-run-on-demand) board detection. Confirms the board is plugged in, runs `arduino-cli board list`/`board details`/`compile --show-properties`, and writes a context document for that board. The board name/link/context argument is **optional** — run it bare and it just reads whatever's plugged in. Pass one when you already know the board, or when `arduino-cli`'s USB-ID guess is wrong or ambiguous (e.g. a Pro Micro clone reporting itself as a Leonardo); that info then overrides the auto-detected guess, and the resulting doc is marked "confirmed by user, not auto-detected." |
-| **Project work** (default) | Any other Arduino-related conversation | Ongoing project help: confirms setup has run, clarifies the exact module/component whenever one is mentioned (not an upfront batch question), compile/upload workflow, wiring/pinout display before touching a new component, and safety rules. |
+| **Project work** (default) | Any other Arduino-related conversation | Ongoing project help: confirms setup has run, clarifies the exact module/component whenever one is mentioned (not an upfront batch question), wiring/pinout display before touching a new component, and safety rules. Sketches always live inside the current project directory (never a temp dir or scratchpad), and every code change is compiled **and flashed to the board** before the turn ends — flashing isn't a separate ask. |
 
 ## Why detection needs two sources, not one
 
