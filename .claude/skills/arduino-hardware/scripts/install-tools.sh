@@ -13,6 +13,18 @@ set -euo pipefail
 WORKSHOP_CORE="arduino:renesas_uno"
 FWUPLOADER_VERSION="2.4.1"
 BIN_DIR="$HOME/.local/bin"
+# Libraries for the parts in references/kit.md (dependencies install automatically).
+KIT_LIBRARIES=(
+  "Adafruit SSD1306"    # 0.96" OLED
+  "DHT sensor library"  # DHT11
+  "MFRC522"             # RC522 RFID reader
+  "IRremote"            # IR receiver / emitter
+  "Keypad"              # 4x4 membrane keypad
+  "MPU9250_WE"          # GY-6500 (MPU-6500)
+  "Servo"               # SG90
+  "Stepper"             # 28BYJ-48 + ULN2003
+  "AccelStepper"        # 28BYJ-48, smooth motion
+)
 
 INSTALL_CORE=1
 if [ "${1:-}" = "--tools-only" ]; then INSTALL_CORE=0; fi
@@ -89,6 +101,17 @@ say "Refreshing the list of boards"
 if [ "$INSTALL_CORE" = 1 ]; then
   say "Installing board support for $WORKSHOP_CORE (this is the big download — a few minutes is normal)"
   "$ACLI" core install "$WORKSHOP_CORE"
+
+  # The UNO R4 core's compiler (arm-none-eabi-gcc 7-2017q4) only ships as an
+  # Intel build for macOS, so Apple Silicon Macs need Rosetta 2 to compile.
+  if [ "$OS" = macOS ] && [ "$ARCH" = ARM64 ] && ! arch -x86_64 /usr/bin/true 2>/dev/null; then
+    say "Installing Rosetta (Apple's helper that lets this Mac run the board's compiler)"
+    softwareupdate --install-rosetta --agree-to-license ||
+      fail "Couldn't install Rosetta. The board's compiler needs it on this Mac."
+  fi
+
+  say "Installing code libraries for the parts in the workshop kit"
+  "$ACLI" lib install "${KIT_LIBRARIES[@]}"
 fi
 
 say "Done."

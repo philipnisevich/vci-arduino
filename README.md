@@ -14,10 +14,10 @@ Claude downloads the free Arduino tools and support for your board. It takes abo
 ```
 /arduino-hardware check
 ```
-Plug the board in with the USB-C cable — the grid of red lights should play an animation. Claude checks the board is connected properly, without changing anything on it. The animation keeps playing until you build your first project.
+Plug the board in with the kit's cable — the grid of red lights should play an animation. (The cable's computer end is the older, wider USB-A plug; if your laptop only has USB-C ports, bring an adapter.) Claude checks the board is connected properly, without changing anything on it. The animation keeps playing until you build your first project.
 
 **Building a project:**
-Just describe what you want to build (e.g. "I want to show a number on a display"). Claude will ask what specific part you're using, then walk you through the wiring and code. Before your very first upload, Claude also makes sure the board's Wi-Fi software is up to date, so internet features (like getting the time) work.
+Just describe what you want to build (e.g. "I want to show a number on a display"). Claude already knows every part in the workshop kit, so it'll tell you which one to grab — and only ask when the kit has more than one that would work. Then it walks you through the wiring and code. Before your very first upload, Claude also makes sure the board's Wi-Fi software is up to date, so internet features (like getting the time) work.
 
 **Using a different board?** Run:
 ```

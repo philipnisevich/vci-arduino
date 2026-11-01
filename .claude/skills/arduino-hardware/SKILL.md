@@ -55,7 +55,7 @@ Runs with no board present, so students can do it at home before opening the kit
    ```bash
    bash .claude/skills/arduino-hardware/scripts/install-tools.sh
    ```
-   It installs `arduino-cli` and `arduino-fwuploader` into `~/.local/bin` from Arduino's official downloads (no Homebrew, no `sudo`, no password), refreshes the board list, and installs the workshop board's core (`arduino:renesas_uno`). Anything already installed is kept, not reinstalled. Its last two lines print where each tool lives.
+   It installs `arduino-cli` and `arduino-fwuploader` into `~/.local/bin` from Arduino's official downloads (no Homebrew, no `sudo`, no password), refreshes the board list, installs the workshop board's core (`arduino:renesas_uno`), installs Rosetta on Apple Silicon Macs (the core's compiler is an Intel-only program), and installs the code libraries for every part in the kit (see `references/kit.md`). Anything already installed is kept, not reinstalled. If macOS pops up a window during this (e.g. asking to allow access to the Documents folder, where libraries are stored), tell them it's expected and to click Allow/OK. Its last two lines print where each tool lives.
 3. If it fails or gets cut off by the timeout, just run it again — it skips whatever's already done, and `arduino-cli` keeps partial downloads. If a download fails, it's almost always the internet connection; say so plainly.
 4. **Windows:** this script runs in Claude Code's Git Bash shell and downloads the Windows builds. It hasn't been tested on a workshop Windows machine yet — if anything fails there, explain what happened plainly and stop rather than improvising admin-level fixes.
 5. Finish with: "You're all set. Don't open the kit or plug anything in yet — at the workshop we'll run `/arduino-hardware check` when you plug the board in for the first time."
@@ -76,6 +76,7 @@ Quick and **read-only**. The board ships with a demo animation on its LED grid, 
    - **"Not yet"** → tell them to let you know once it's in, and stop this turn.
 3. **Detect:** `arduino-cli board list --json`.
    - Lists `arduino:renesas_uno:unor4wifi` → it's the workshop board. Use the bundled `references/boards/arduino_renesas_uno_unor4wifi.md` as-is — **no web research, no regenerating it**.
+   - The kit's cable has a **USB-A** plug (the wider, rectangular kind). If their laptop only has USB-C ports (most MacBooks), they need a USB-C-to-A adapter or hub — don't let them hunt for a port that isn't there.
    - Nothing listed, but the lights are on → the board has power but no data connection. That's almost always a **charge-only USB cable** (it carries power but not data) or a loose plug. Explain that plainly, have them swap to the kit's cable or another port, and re-run `board list`.
    - Listed as "Unknown" → the board core isn't installed; run the installer, then re-run `board list`.
    - A different board → it isn't the workshop board. Tell them, and switch to **Setup mode** (from Step 4) for that board.
@@ -185,7 +186,14 @@ If the user is mid-conversation about a project and the board isn't confirmed ye
 
 ### Step 2 — Clarify the exact module whenever one comes up
 
-This is an **ongoing** behavior for the whole conversation, not a one-time upfront question. Whenever the user describes a piece of functionality that implies a hardware module — a display, a sensor, a motor, a wireless connection, a button, anything that isn't already using the board's own onboard I/O — and they haven't already named the specific part, stop and ask before writing code or wiring instructions for it.
+This is an **ongoing** behavior for the whole conversation, not a one-time upfront question.
+
+**Workshop kit first.** Every workshop student has the ELEGOO UNO R4 WiFi Super Starter Kit, listed part by part in [`references/kit.md`](references/kit.md) with models, pinouts, voltages, and libraries. When a project needs a part, look there first:
+- **Exactly one kit part fits** (e.g. "measure distance" → HC-SR04, "temperature and humidity" → DHT11, "unlock with a card" → RC522): use it without asking — just tell them which part from their kit you're using, so they can find it. Use kit.md's specs and wiring; no web lookup needed.
+- **Several kit parts fit** (e.g. "a display" → OLED, 7-segment, or the board's LED grid; "a motor" → servo, stepper, or fan motor): ask them to pick, offering **only the kit's options** (with a short plain description of what each is good for), plus "something not from the kit".
+- **Not in the kit**, or they say they're using their own part: fall through to the general flow below.
+
+General flow (non-kit parts, or a non-workshop user with no kit): whenever the user describes a piece of functionality that implies a hardware module — a display, a sensor, a motor, a wireless connection, a button, anything that isn't already using the board's own onboard I/O — and they haven't already named the specific part, stop and ask before writing code or wiring instructions for it.
 
 Example: user says "I want to display this number on a display." Don't assume which display. Ask something like:
 
