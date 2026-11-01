@@ -1,47 +1,101 @@
 ---
 name: arduino-hardware
-description: "Use whenever the user wants to build, continue, or debug an Arduino/Arduino-compatible hardware project, wants to set up/detect their board, or says the detected board is wrong (e.g. a Pro Micro clone misidentified as a Leonardo) — any board, not a specific one. Triggers: Arduino, arduino-cli, sketch/.ino, breadboard, wiring, pinout, GPIO, sensor, actuator, module, display, upload/flash to board, 'my Arduino isn't working', 'let's build a project with my board', 'set up my Arduino board', 'that's not the right board'. The people using this are assumed to be non-technical about hardware — explain things plainly, never assume they know pin voltages or how to avoid frying a board. Never assume which board they have — always run setup (below) before assuming project work can proceed."
+description: "Use whenever the user wants to build, continue, or debug an Arduino/Arduino-compatible hardware project, wants to install the Arduino tools, wants to check/set up/detect their board, or says the detected board is wrong (e.g. a Pro Micro clone misidentified as a Leonardo) — any board, not a specific one. Triggers: Arduino, arduino-cli, sketch/.ino, breadboard, wiring, pinout, GPIO, sensor, actuator, module, display, upload/flash to board, 'my Arduino isn't working', 'let's build a project with my board', 'install the Arduino stuff', 'check my board', 'set up my Arduino board', 'that's not the right board'. The people using this are assumed to be non-technical about hardware — explain things plainly, never assume they know pin voltages or how to avoid frying a board. Never assume which board they have — always confirm the board (check or setup, below) before assuming project work can proceed."
 ---
 
 # Arduino Hardware Skill
 
-Board-agnostic guide for Arduino hardware projects, with two modes:
+Board-agnostic guide for Arduino hardware projects, tuned for a workshop that uses the **Arduino UNO R4 WiFi** (FQBN `arduino:renesas_uno:unor4wifi`, reference doc already bundled in `references/boards/`). Modes:
 
-- **`/arduino-hardware setup [board name, product link, or context]`** — one-time (or re-run-on-demand) board detection that builds a reusable context document. The link/name/context argument is **optional**: run it bare and it just detects the connected board and reads its data via `arduino-cli` as normal. Add a link or board name when you already know what it is or when `arduino-cli`'s USB-ID guess turns out wrong (e.g. many **Pro Micro** clones intentionally reuse the **Arduino Leonardo**'s USB VID/PID, so auto-detection will confidently report the wrong board) — that info then takes priority over the auto-detected guess.
+- **`/arduino-hardware install`** — before the workshop, **no board needed**. Installs every tool and download the workshop needs. Never touches a board.
+- **`/arduino-hardware check`** — at the workshop, board plugged in. A quick, **strictly read-only** connection check: is the board there, is it the workshop board, which port is it on. **Never flashes or uploads anything** — the board's factory demo animation must still be playing when this finishes.
+- **`/arduino-hardware setup [board name, product link, or context]`** — the general flow for any *other* board, or when detection is wrong. The argument is optional; pass a name/link when you already know the board or when `arduino-cli`'s USB-ID guess is wrong (e.g. many **Pro Micro** clones reuse the **Arduino Leonardo**'s USB VID/PID, so auto-detection confidently reports the wrong board) — that info then takes priority over the auto-detected guess.
 - **Project work** (default, auto-triggered by general Arduino conversation) — compiling/uploading, clarifying which module/component is meant whenever one comes up, and keeping wiring grounded in real specs.
 
-The user is explicitly non-technical about electronics. Never skip a step, question, or safety explanation to "save time" — that's the point of this skill.
+The user is explicitly non-technical about electronics *and* about computers. Never skip a step, question, or safety explanation to "save time" — that's the point of this skill. Never ask them to open a terminal or type a command themselves; you run everything.
 
 ## What to do when invoked
 
-- User typed `/arduino-hardware setup` (with or without a trailing board name/link/context), or explicitly asked to set up / detect / re-detect / connect their board, or said the detected/assumed board is wrong and told you what it actually is → **Setup mode**, stop there.
-- Otherwise → general project conversation, go to **Project work** below.
+- `/arduino-hardware install`, or they ask to install / get ready / prepare before the workshop → **Install mode**, stop there.
+- `/arduino-hardware check`, or they ask to check / test their board connection → **Check mode**, stop there.
+- `/arduino-hardware setup` (with or without a trailing board name/link/context), or they said the detected/assumed board is wrong and told you what it actually is → **Setup mode**, stop there.
+- Otherwise → **Project work**.
+
+## Finding the tools
+
+The tools are installed into `~/.local/bin`, which usually isn't on the shell's `PATH`. Every command in this skill written as `arduino-cli` or `arduino-fwuploader` means: use the bare name if `command -v arduino-cli` (resp. `arduino-fwuploader`) finds it, otherwise call it by full path as `~/.local/bin/arduino-cli` (resp. `~/.local/bin/arduino-fwuploader`) — write it exactly like that, with the `~`, so it matches the project's pre-approved commands in `.claude/settings.json`. If neither exists, the tools aren't installed: run Install mode's script first (it doesn't touch the board, so it's always safe), then continue.
+
+## Per-project board record: `.arduino-board.json`
+
+The project root holds `.arduino-board.json` once a board has been confirmed (by Check or Setup mode). This file — **not** the presence of docs in `references/boards/`, which ship with the skill — is what says "this student's board is known." Shape:
+
+```json
+{
+  "fqbn": "arduino:renesas_uno:unor4wifi",
+  "name": "Arduino UNO R4 WiFi",
+  "reference": "references/boards/arduino_renesas_uno_unor4wifi.md",
+  "source": "auto-detected",
+  "confirmed": "2026-11-01",
+  "wifi_firmware": null
+}
+```
+
+- `source` is `"auto-detected"` or `"user-confirmed"` (Setup mode Step 2 overrode the CLI's guess).
+- `wifi_firmware` is `null` until Project work's firmware step has read the Wi-Fi chip's firmware version; then it's that version string (e.g. `"0.6.0"`).
+- Never store the port here — ports change between sessions; always re-read with `arduino-cli board list`.
+
+---
+
+## Install mode (`/arduino-hardware install`)
+
+Runs with no board present, so students can do it at home before opening the kit.
+
+1. Tell them in one or two plain sentences what's about to happen: "I'm going to download the free Arduino tools — the program that turns your code into something the board understands, plus support for your specific board. It's a few hundred megabytes and can take around 10 minutes. You don't need to plug anything in, and it won't ask for your password." Ask them to keep the computer awake and online.
+2. Run the bundled installer, **with the longest Bash timeout available (600000 ms)** — the board-support download alone can take most of 10 minutes:
+   ```bash
+   bash .claude/skills/arduino-hardware/scripts/install-tools.sh
+   ```
+   It installs `arduino-cli` and `arduino-fwuploader` into `~/.local/bin` from Arduino's official downloads (no Homebrew, no `sudo`, no password), refreshes the board list, and installs the workshop board's core (`arduino:renesas_uno`). Anything already installed is kept, not reinstalled. Its last two lines print where each tool lives.
+3. If it fails or gets cut off by the timeout, just run it again — it skips whatever's already done, and `arduino-cli` keeps partial downloads. If a download fails, it's almost always the internet connection; say so plainly.
+4. **Windows:** this script runs in Claude Code's Git Bash shell and downloads the Windows builds. It hasn't been tested on a workshop Windows machine yet — if anything fails there, explain what happened plainly and stop rather than improvising admin-level fixes.
+5. Finish with: "You're all set. Don't open the kit or plug anything in yet — at the workshop we'll run `/arduino-hardware check` when you plug the board in for the first time."
+
+---
+
+## Check mode (`/arduino-hardware check`)
+
+Quick and **read-only**. The board ships with a demo animation on its LED grid, and students should see it the first time they plug in — so:
+
+> **Hard rule for Check mode: never run `upload`, `compile --upload`, `monitor`, `burn-bootloader`, or any `arduino-fwuploader` command, and never open the board's serial port in any way** (even opening it at 1200 baud resets the board into upload mode and stops the animation). The only command that touches the board here is `arduino-cli board list`.
+
+1. **Tools present?** Resolve the tools (see *Finding the tools*). If they're missing, the student skipped Install mode — tell them that's fine, run the installer (Install mode steps 1–3), then continue.
+2. **Ask if it's plugged in**, via `AskUserQuestion`:
+   > "Plug your Arduino into this computer with the USB-C cable from the kit. Once it's in, the little grid of red lights on the board should start playing an animation. Is it plugged in?"
+   - **"Yes, it's plugged in and the lights are on"** → step 3.
+   - **"It's plugged in but nothing lights up"** → the board isn't getting power: check the cable is pushed in fully at both ends, try another USB port. Ask again.
+   - **"Not yet"** → tell them to let you know once it's in, and stop this turn.
+3. **Detect:** `arduino-cli board list --json`.
+   - Lists `arduino:renesas_uno:unor4wifi` → it's the workshop board. Use the bundled `references/boards/arduino_renesas_uno_unor4wifi.md` as-is — **no web research, no regenerating it**.
+   - Nothing listed, but the lights are on → the board has power but no data connection. That's almost always a **charge-only USB cable** (it carries power but not data) or a loose plug. Explain that plainly, have them swap to the kit's cable or another port, and re-run `board list`.
+   - Listed as "Unknown" → the board core isn't installed; run the installer, then re-run `board list`.
+   - A different board → it isn't the workshop board. Tell them, and switch to **Setup mode** (from Step 4) for that board.
+4. **Record it:** write `.arduino-board.json` in the project root (see shape above; `source: "auto-detected"`, today's date, `wifi_firmware: null` unless a previous record already had a value — keep it).
+5. **Report** in plain language: "Your Arduino UNO R4 WiFi is connected and ready (port `<port>`). The animation it's playing is a demo that came on the board — it'll keep running until you build your first project, which will replace it." Then invite them to describe what they want to build.
 
 ---
 
 ## Setup mode (`/arduino-hardware setup [board name, product link, or context]`)
 
-### Step 1 — Make sure `arduino-cli` is installed
+For boards other than the workshop board, or when detection is wrong. Like Check mode, setup only *reads* from the board — it never uploads.
 
+### Step 1 — Make sure the tools are installed
+
+Resolve the tools (see *Finding the tools*). If missing, run the installer in tools-only mode (the right core gets installed in Step 4, once the board is known), with a 600000 ms timeout:
 ```bash
-arduino-cli version
+bash .claude/skills/arduino-hardware/scripts/install-tools.sh --tools-only
 ```
 
-If that fails (command not found), install it, then re-run `version` to confirm:
-
-| OS | Install command |
-|----|------------------|
-| macOS | `brew install arduino-cli` |
-| Linux | `curl -fsSL https://raw.githubusercontent.com/arduino/arduino-cli/master/install.sh \| sh` (installs to `./bin`; add to `PATH`) |
-| Windows | `winget install ArduinoSA.CLI` (or `choco install arduino-cli`) |
-
-First-time setup after install:
-```bash
-arduino-cli config init
-arduino-cli core update-index
-```
-
-Explain in one sentence what `arduino-cli` is ("the official command-line tool that compiles your code and sends it to the board") — don't assume the user knows.
+Explain in one sentence what `arduino-cli` is ("the official tool that turns your code into something the board can run and sends it to the board") — don't assume the user knows.
 
 ### Step 2 — If a board name/link/context was given, resolve it now
 
@@ -60,13 +114,13 @@ State the resolved board and FQBN in plain language and confirm it's right — e
 
 Before running any detection command, ask using `AskUserQuestion`:
 
-> "Is your Arduino board plugged into this computer via USB right now?"
+> "Is your Arduino board plugged into this computer with a USB cable right now?"
 
 with options along the lines of:
 - **Yes, it's plugged in**
 - **No, I can't plug it in right now**
 
-- **If "No":** explain that pulling the board's real build data needs a live USB connection, and that you'll pick this back up once it's connected. If Step 2 already resolved which board this is, say so — that part's done, you just need it connected for the rest. Ask them to let you know when it's plugged in, then stop and wait for their reply — don't guess further or proceed this turn.
+- **If "No":** explain that reading the board's details needs it connected, and that you'll pick this back up once it's plugged in. If Step 2 already resolved which board this is, say so — that part's done. Ask them to let you know when it's plugged in, then stop and wait for their reply — don't guess further or proceed this turn.
 - **If "Yes":** continue to Step 4.
 
 ### Step 4 — Detect the board
@@ -92,13 +146,13 @@ Install the core for the resolved FQBN if it isn't installed yet (`arduino-cli c
 
 Once you have the FQBN, check `references/boards/` for a file named after it (colons/slashes → underscores, e.g. `arduino:renesas_uno:unor4wifi` → `arduino_renesas_uno_unor4wifi.md`).
 
-- **Exists already, and this run didn't override it with new user-supplied context:** tell the user this board's already set up, confirm the current **port** with a fresh `arduino-cli board list` (ports can change between sessions), and stop — no need to regenerate build data that hasn't changed.
+- **Exists already (including docs bundled with the skill), and this run didn't override it with new user-supplied context:** use it as-is — no research, no regenerating. Skip to Step 6.
 - **Doesn't exist, or needs to be (re)written because Step 2 resolved/overrode the board:** generate it now, from real CLI output, not from memory or assumption:
   ```bash
   arduino-cli board details -b <fqbn> --json
   arduino-cli compile --fqbn <fqbn> --show-properties <any-sketch-dir>
   ```
-  (If no sketch exists yet, `arduino-cli sketch new` a throwaway one first just to have a path to run `--show-properties` against.)
+  (If no sketch exists yet, `arduino-cli sketch new` a throwaway one first just to have a path to run `--show-properties` against. `compile` alone never touches the board.)
 
   `--show-properties` is the important one — it dumps the real MCU, clock speed, compiler flags/defines, toolchain paths, and upload tool/protocol straight from the installed core's own build config. This is exactly what compile commands for this board are built from, so it belongs in the doc verbatim (trimmed to the parts that matter), not paraphrased.
 
@@ -109,23 +163,25 @@ Once you have the FQBN, check `references/boards/` for a file named after it (co
   If Step 2 resolved/overrode the board from user-supplied context, add a line at the very top of the doc:
   > **Confirmed by user, not auto-detected.** `arduino-cli board list` reports this board's USB ID as `<whatever it showed, e.g. "Unknown" or "Arduino Leonardo">` — that detection is wrong/ambiguous for this specific board. This doc is for the real board: `<real name>`.
 
-  Keep that note permanently — it's what stops a future session from trusting the CLI's guess again. And if `references/boards/` already has a doc filed under the *wrong*, previously auto-detected FQBN from an earlier session (e.g. `arduino_avr_leonardo.md` for what's actually a Pro Micro), don't leave it sitting there to be picked up by mistake — tell the user it exists and was likely a misdetection, and delete it (or fold a note into it pointing at the corrected file).
+  Keep that note permanently — it's what stops a future session from trusting the CLI's guess again. And if `references/boards/` already has a doc filed under the *wrong*, previously auto-detected FQBN from an earlier session (e.g. `arduino_avr_leonardo.md` for what's actually a Pro Micro), don't leave it sitting there to be picked up by mistake — tell the user it exists and was likely a misdetection, and delete it (or fold a note into it pointing at the corrected file). Never delete a doc bundled with the skill (e.g. the UNO R4 WiFi one).
 
 This is how the skill's board knowledge grows over time — every new board encountered gets written back here so future setup runs on the same board just reuse it.
 
-### Step 6 — Confirm and hand off
+### Step 6 — Record, confirm, and hand off
 
-Summarize for the user in plain language: what board was detected/confirmed, its logic voltage, and its current port. Let them know they're set up and can go ahead and describe the project they want to build.
+Write `.arduino-board.json` (see shape above; `source` is `"user-confirmed"` if Step 2 overrode detection). Then summarize for the user in plain language: what board was detected/confirmed, its logic voltage, and its current port. Let them know they're set up and can go ahead and describe the project they want to build.
 
 ---
 
 ## Project work (default)
 
-### Step 1 — Confirm setup has run
+### Step 1 — Confirm the board is known
 
-Check `references/boards/` for at least one board context file. If it's empty (no board has ever been detected in this project), tell the user to run `/arduino-hardware setup` first — don't guess a board's FQBN, voltage, or pin map from scratch here. Once a context doc exists for the board they're using, proceed.
+Read `.arduino-board.json` in the project root. If it's missing, the board hasn't been confirmed yet — run **Check mode** now (it's quick and read-only); if the board turns out not to be the workshop board, Check mode hands off to Setup mode. Don't guess a board's FQBN, voltage, or pin map. Docs existing in `references/boards/` do **not** count — they ship with the skill.
 
-If the user is mid-conversation about a project and setup hasn't run, it's fine to discuss the project idea in general terms, but hold off on specific pin numbers, voltages, or compile commands until setup has produced real data.
+Once the record exists, load the board doc it points to (`reference`) and proceed.
+
+If the user is mid-conversation about a project and the board isn't confirmed yet, it's fine to discuss the project idea in general terms, but hold off on specific pin numbers, voltages, or compile commands until it is.
 
 ### Step 2 — Clarify the exact module whenever one comes up
 
@@ -137,13 +193,32 @@ Example: user says "I want to display this number on a display." Don't assume wh
 
 Use `AskUserQuestion` with a few common options for that category of module plus room for "Other" (paste a product link or describe it) when there's a natural short list; ask a plain open question when there isn't. The goal is always to end up with a specific, identifiable part — a category name alone ("a display") isn't enough to give correct pins, voltage, or wiring.
 
-Once the exact module is identified, look up its datasheet/pinout/voltage (`WebSearch`/`WebFetch`) before it's wired in — this feeds directly into Step 4. If the same module was already clarified and looked up earlier in the conversation, don't ask again.
+Once the exact module is identified, look up its datasheet/pinout/voltage (`WebSearch`/`WebFetch`) before it's wired in — this feeds directly into Step 5. If the same module was already clarified and looked up earlier in the conversation, don't ask again.
 
-### Step 3 — Compile / upload workflow
+### Step 3 — Wi-Fi firmware check, once, before the first upload (UNO R4 WiFi only)
+
+The UNO R4 WiFi has a second chip (an ESP32-S3) that handles Wi-Fi, and its firmware is separate from the student's sketch. Boards that ship with old Wi-Fi firmware fail at things like getting the time from the internet — a clock project failed at a previous workshop for exactly this reason. So the **first time** a project is about to be uploaded, if `.arduino-board.json` has `wifi_firmware: null` and the FQBN is `arduino:renesas_uno:unor4wifi`:
+
+1. Tell them plainly: "Before your first upload, I'm going to check the board's Wi-Fi software is up to date — old versions break internet features. This will replace the demo animation, which your project was about to do anyway." (This is why it's here and not in Check mode — reading the version means uploading a small helper program.)
+2. Get the current port (`arduino-cli board list`), then read the installed version (uploads a helper sketch; needs internet the first time to fetch its helper tools):
+   ```bash
+   arduino-fwuploader firmware get-version -b arduino:renesas_uno:unor4wifi -a <port> --format json
+   ```
+3. Get the newest available version: `arduino-fwuploader firmware list -b arduino:renesas_uno:unor4wifi --format json` — the entry with `"Latest": true` has the newest `firmware_version`. (This one only reads Arduino's online list; it doesn't touch the board.)
+4. If the installed version is older, update it — explain it takes a minute or two and that they must not unplug the board meanwhile:
+   ```bash
+   arduino-fwuploader firmware flash -b arduino:renesas_uno:unor4wifi -a <port>
+   ```
+   Re-run `arduino-cli board list` afterwards (the port can change), and re-run `get-version` to confirm the update took.
+5. Write the confirmed version into `wifi_firmware` in `.arduino-board.json`, so this never runs again for this board. Then continue to the student's upload in Step 4.
+
+If any of this fails, explain plainly what happened and still go ahead with the student's project upload — a project that doesn't use Wi-Fi doesn't need the update. Note it so you retry before any Wi-Fi project.
+
+### Step 4 — Compile / upload workflow
 
 **Sketches live inside the current project directory — never elsewhere.** Before creating or editing a sketch, confirm the working directory with `pwd`, and put the sketch under it (e.g. `./<sketch-name>/<sketch-name>.ino`) rather than in a temp dir, scratchpad, home directory, or any path outside the project. Don't let a sketch end up scattered somewhere unrelated to where the user is actually working — every `arduino-cli` command below should take a `<sketch-dir>` that resolves inside the project directory. If a sketch already exists in the project (check before creating a new one), edit it in place instead of scaffolding a second copy elsewhere.
 
-See [`references/cli-cheatsheet.md`](references/cli-cheatsheet.md) for the full command reference (sketches, libraries, monitor). Core loop, using the FQBN and port from the board's context doc (re-fetch the port fresh each time with `arduino-cli board list` — never reuse an old one, it can change between sessions):
+See [`references/cli-cheatsheet.md`](references/cli-cheatsheet.md) for the full command reference (sketches, libraries, monitor). Core loop, using the FQBN from `.arduino-board.json` and the port fresh from `arduino-cli board list` each time (never reuse an old one, it can change between sessions):
 
 ```bash
 arduino-cli sketch new <name>                                   # scaffold a new sketch, inside the project dir
@@ -153,7 +228,7 @@ arduino-cli compile --upload -p <port> --fqbn <fqbn> <sketch-dir>  # both in one
 arduino-cli monitor -p <port> -c baudrate=115200                # read Serial output
 ```
 
-**Flash after every change, every time — don't just compile and stop.** Whenever the sketch is created or edited in response to a user prompt, the turn isn't done until it's been compiled *and uploaded* to the board (`compile --upload`, or `compile` then `upload`). Don't wait for a separate "flash it" request — that's the default expectation for every prompt that touches code, not an extra step. The only exception is when the board genuinely isn't available (see Step 1) — say so plainly rather than silently skipping the upload.
+**Flash after every change, every time — don't just compile and stop.** Whenever the sketch is created or edited in response to a user prompt, the turn isn't done until it's been compiled *and uploaded* to the board (`compile --upload`, or `compile` then `upload`). Don't wait for a separate "flash it" request — that's the default expectation for every prompt that touches code, not an extra step. The only exception is when the board genuinely isn't available (see Step 1) — say so plainly rather than silently skipping the upload. (On the very first upload, run Step 3 first.)
 
 If compile fails on a missing library:
 ```bash
@@ -161,7 +236,7 @@ arduino-cli lib search <keyword>
 arduino-cli lib install "<Library Name>"
 ```
 
-### Step 4 — Always show pinout / wiring info before touching a new component
+### Step 5 — Always show pinout / wiring info before touching a new component
 
 Every time a project introduces a new sensor, actuator, or module (after it's been clarified per Step 2), before telling the user to connect a single wire:
 
@@ -177,7 +252,7 @@ Every time a project introduces a new sensor, actuator, or module (after it's be
 
 Never wire anything before this step, even if the user seems experienced — assume they aren't.
 
-### Step 5 — Safety rules (always in effect)
+### Step 6 — Safety rules (always in effect)
 
 See [`references/wiring-safety.md`](references/wiring-safety.md) for the full list. The non-negotiables:
 

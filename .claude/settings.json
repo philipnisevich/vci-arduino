@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(bash .claude/skills/arduino-hardware/scripts/install-tools.sh:*)",
+      "Bash(arduino-cli:*)",
+      "Bash(~/.local/bin/arduino-cli:*)",
+      "Bash(arduino-fwuploader:*)",
+      "Bash(~/.local/bin/arduino-fwuploader:*)",
+      "Bash(command -v arduino-cli:*)",
+      "Bash(command -v arduino-fwuploader:*)"
+    ]
+  }
+}

@@ -1,18 +1,28 @@
 # vci-arduino
 
-A Claude Code skill that helps you build Arduino projects — even if you've never done electronics before. It figures out what board you have, tells you exactly how to wire things up, and keeps you from frying anything.
+A Claude Code skill that helps you build Arduino projects — even if you've never done electronics before. It figures out what board you have, tells you exactly how to wire things up, and keeps you from frying anything. You never need to open a terminal or type commands — Claude does all of that.
 
 ## How to use it
 
-**First time with a board:**
+**Before the workshop (at home, kit still closed):**
+```
+/arduino-hardware install
+```
+Claude downloads the free Arduino tools and support for your board. It takes about 10 minutes, doesn't need the board, and won't ask for your password. Keep your computer online and awake while it runs.
+
+**At the workshop, when you first plug in your board:**
+```
+/arduino-hardware check
+```
+Plug the board in with the USB-C cable — the grid of red lights should play an animation. Claude checks the board is connected properly, without changing anything on it. The animation keeps playing until you build your first project.
+
+**Building a project:**
+Just describe what you want to build (e.g. "I want to show a number on a display"). Claude will ask what specific part you're using, then walk you through the wiring and code. Before your very first upload, Claude also makes sure the board's Wi-Fi software is up to date, so internet features (like getting the time) work.
+
+**Using a different board?** Run:
 ```
 /arduino-hardware setup
 ```
-Plug your board in via USB and run this. Claude will detect it and remember it for next time.
-
-**Building a project:**
-Just describe what you want to build (e.g. "I want to show a number on a display"). Claude will ask what specific part you're using, then walk you through the wiring and code.
-
 If your board gets detected wrong (this happens with some clone boards), tell Claude what board it actually is, or run:
 ```
 /arduino-hardware setup <board name or product link>
