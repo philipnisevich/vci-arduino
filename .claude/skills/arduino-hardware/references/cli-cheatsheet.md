@@ -2,9 +2,10 @@
 
 ## Setup (one-time per machine)
 ```bash
-arduino-cli config init                # creates arduino-cli.yaml
-arduino-cli core update-index          # refreshes the list of installable boards
+bash .claude/skills/arduino-hardware/scripts/install-tools.sh               # tools + UNO R4 WiFi core
+bash .claude/skills/arduino-hardware/scripts/install-tools.sh --tools-only  # tools only
 ```
+Installs `arduino-cli` and `arduino-fwuploader` into `~/.local/bin` from Arduino's official downloads — no Homebrew, no `sudo`, no password — then runs `arduino-cli core update-index`. Safe to re-run. If a tool isn't on `PATH`, call it as `~/.local/bin/arduino-cli` / `~/.local/bin/arduino-fwuploader`.
 
 ## Discover / install a board's core
 ```bash
@@ -48,3 +49,11 @@ arduino-cli lib upgrade                         # upgrade all installed librarie
 
 ## Finding the port
 The port (e.g. `/dev/cu.usbmodemXXXX` on macOS, `/dev/ttyACM0`/`/dev/ttyUSB0` on Linux, `COM3` on Windows) can change across reboots or when switching USB ports/cables. Always re-run `arduino-cli board list` right before upload rather than reusing a port from earlier in the conversation.
+
+## Wi-Fi module firmware (UNO R4 WiFi's ESP32-S3)
+```bash
+arduino-fwuploader firmware list -b arduino:renesas_uno:unor4wifi --format json                  # versions available
+arduino-fwuploader firmware get-version -b arduino:renesas_uno:unor4wifi -a <port> --format json  # what's on the board
+arduino-fwuploader firmware flash -b arduino:renesas_uno:unor4wifi -a <port>                      # update to latest
+```
+`get-version` and `flash` both upload a helper sketch to the board, replacing whatever was running (including the factory demo animation). Never run them during `/arduino-hardware check`.

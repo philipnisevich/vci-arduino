@@ -24,7 +24,9 @@ arduino-cli upload -p <port> --fqbn arduino:renesas_uno:unor4wifi <sketch-dir>
 
 The CLI doesn't expose electrical/pin specs — sourced from Arduino's own docs and community pinout references.
 
-Also has an **ESP32-S3** co-processor onboard (WiFi + Bluetooth + LED matrix driver) — separate from the RA4M1 above, 3.3V logic.
+Also has an **ESP32-S3** co-processor onboard (Wi-Fi + Bluetooth, and it doubles as the USB-to-serial bridge) — separate from the RA4M1 above, 3.3V logic. The LED matrix is driven by the RA4M1, not the ESP32-S3.
+
+**Wi-Fi firmware:** the ESP32-S3 runs its own firmware, separate from sketches. Older firmware versions break features like getting the time over the internet (`WiFi.getTime()` / NTP). Check and update it with `arduino-fwuploader` (see SKILL.md, Project work Step 3) — note that checking the version uploads a helper sketch, replacing whatever was on the board.
 
 **Logic level: 5V** on the main RA4M1 header pins. The ESP32-S3 side (and its dedicated 2×3 header) is **3.3V** — do not mix these up when wiring.
 
