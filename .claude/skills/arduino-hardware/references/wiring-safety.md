@@ -14,7 +14,7 @@ Written for someone who has never wired electronics before. Apply these every ti
 - Keep exposed wires away from each other — a stray short between VCC and GND, or between two signal pins, can be enough to damage the board or component.
 
 ## After wiring, before powering on
-- Visually re-trace every wire against the wiring map you printed in Step 4 of the main skill.
+- Visually re-trace every wire against the wiring map you printed in Project work Step 5 of the main skill.
 - If anything looks uncertain, don't guess — ask, or look up the exact component's datasheet.
 
 ## While powered

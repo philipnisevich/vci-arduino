@@ -2,6 +2,14 @@
 
 A Claude Code skill that helps you build Arduino projects — even if you've never done electronics before. It figures out what board you have, tells you exactly how to wire things up, and keeps you from frying anything. You never need to open a terminal or type commands — Claude does all of that.
 
+## Getting it
+
+1. Download this project: on its GitHub page, click the green **Code** button, then **Download ZIP**.
+2. Unzip it (double-click the downloaded file).
+3. Open the unzipped folder in Claude Code — the folder that has this README directly inside it, not the folder above it.
+
+The commands below only work when Claude Code is opened in that folder. If `/arduino-hardware` isn't recognized, you're in the wrong folder.
+
 ## How to use it
 
 **Before the workshop (at home, kit still closed):**

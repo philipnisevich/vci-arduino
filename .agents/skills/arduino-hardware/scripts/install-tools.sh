@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 # Installs everything the arduino-hardware skill needs, without a board and
-# without a password: arduino-cli, arduino-fwuploader, and the board core.
+# without a password: arduino-cli, arduino-fwuploader, Rosetta (Apple Silicon
+# Macs only), and the board core.
 #
-#   bash install-tools.sh               # tools + the workshop board's core (arduino:renesas_uno)
-#   bash install-tools.sh --tools-only  # tools only (setup mode installs the right core itself)
+#   bash install-tools.sh               # tools + the workshop board's core (arduino:renesas_uno) + kit libraries
+#   bash install-tools.sh --tools-only  # tools (and Rosetta) only — setup mode installs the right core itself
 #
 # Never touches a connected board. Never uses sudo or Homebrew: binaries are
 # downloaded from Arduino's official release builds into ~/.local/bin, a
@@ -95,20 +96,22 @@ else
 fi
 "$FWU" version >/dev/null || fail "arduino-fwuploader was installed but won't run."
 
+# Arduino's compilers for macOS are Intel-only builds — the UNO R4 core's
+# arm-none-eabi-gcc 7-2017q4 and the classic AVR core's avr-gcc alike — so
+# Apple Silicon Macs need Rosetta 2 to compile for any board. That's why this
+# runs in --tools-only mode too.
+if [ "$OS" = macOS ] && [ "$ARCH" = ARM64 ] && ! arch -x86_64 /usr/bin/true 2>/dev/null; then
+  say "Installing Rosetta (Apple's helper that lets this Mac run the board's compiler)"
+  softwareupdate --install-rosetta --agree-to-license ||
+    fail "Couldn't install Rosetta. The board's compiler needs it on this Mac."
+fi
+
 say "Refreshing the list of boards"
 "$ACLI" core update-index >/dev/null
 
 if [ "$INSTALL_CORE" = 1 ]; then
   say "Installing board support for $WORKSHOP_CORE (this is the big download — a few minutes is normal)"
   "$ACLI" core install "$WORKSHOP_CORE"
-
-  # The UNO R4 core's compiler (arm-none-eabi-gcc 7-2017q4) only ships as an
-  # Intel build for macOS, so Apple Silicon Macs need Rosetta 2 to compile.
-  if [ "$OS" = macOS ] && [ "$ARCH" = ARM64 ] && ! arch -x86_64 /usr/bin/true 2>/dev/null; then
-    say "Installing Rosetta (Apple's helper that lets this Mac run the board's compiler)"
-    softwareupdate --install-rosetta --agree-to-license ||
-      fail "Couldn't install Rosetta. The board's compiler needs it on this Mac."
-  fi
 
   say "Installing code libraries for the parts in the workshop kit"
   "$ACLI" lib install "${KIT_LIBRARIES[@]}"
