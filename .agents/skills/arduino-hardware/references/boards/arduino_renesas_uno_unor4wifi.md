@@ -64,7 +64,7 @@ Also has an **ESP32-S3** co-processor onboard (Wi-Fi + Bluetooth, and it doubles
 | I2C (5V) | A4 = SDA, A5 = SCL | No built-in pull-ups — add external ones (typ. 4.7kΩ) if a module doesn't include them |
 | I2C (3.3V) | Qwiic / STEMMA QT connector | Separate secondary bus, plug-and-play |
 | SPI | D10 = CS, D11 = COPI (MOSI), D12 = CIPO (MISO), D13 = SCK | ICSP header also breaks these out |
-| CAN | D4 = TX, D5 = RX | Needs an external CAN transceiver module |
+| CAN | D10 = TX, D13 = RX | Needs an external CAN transceiver module. Shares pins with SPI (CS and SCK). From the core's `variants/UNOWIFIR4/pins_arduino.h` — D4/D5 is the R4 *Minima*, not this board |
 | ESP32-S3 header | 2×3 header: GPIO42, GPIO41, GPIO43, GPIO0, GPIO44, GND | All 3.3V logic |
 
 **Other onboard features:**

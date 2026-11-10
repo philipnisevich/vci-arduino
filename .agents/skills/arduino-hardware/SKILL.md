@@ -91,7 +91,7 @@ For boards other than the workshop board, or when detection is wrong. Like Check
 
 ### Step 1 — Make sure the tools are installed
 
-Resolve the tools (see *Finding the tools*). If missing, run the installer in tools-only mode (the right core gets installed in Step 4, once the board is known), with a 600000 ms timeout:
+Resolve the tools (see *Finding the tools*). If missing, run the installer in tools-only mode (it still installs Rosetta on Apple Silicon Macs, which every Arduino compiler needs; the right core gets installed in Step 4, once the board is known), with a 600000 ms timeout:
 ```bash
 bash .agents/skills/arduino-hardware/scripts/install-tools.sh --tools-only
 ```
@@ -251,9 +251,9 @@ Every time a project introduces a new sensor, actuator, or module (after it's be
 1. Print the relevant pin table from the board's context doc (which pins are free, which are PWM/analog/I2C/etc., voltage) plus the module's own pinout from Step 2.
 2. Print a plain-text wiring map, one line per wire, in the form `<component pin> → <board pin>` — e.g.:
    ```
-   DHT22 VCC  → 5V
-   DHT22 GND  → GND
-   DHT22 DATA → D2  (add a 10kΩ pull-up resistor to 5V)
+   DHT11 VCC  → 5V
+   DHT11 GND  → GND
+   DHT11 DATA → D2  (no extra resistor — the kit's DHT11 module has its pull-up built in)
    ```
 3. Call out any voltage mismatch explicitly (e.g. a 3.3V-only sensor on a 5V board needs a level shifter or the 3.3V rail, never the 5V pin).
 4. If the user wants a visual (not just text) wiring diagram, generate one as an SVG and publish it via the `Artifact` tool rather than trying to draw it in chat — reference `artifact-diagramming` skill guidance for how to make it legible. Default to the plain-text table above when a quick visual isn't specifically asked for; it's more reliable across every surface Codex runs in.

@@ -13,9 +13,11 @@ Use these unless the project needs otherwise, so parts don't collide:
 | Pins | Reserved for |
 |---|---|
 | A4 (SDA), A5 (SCL) | I2C — OLED (address 0x3C) and MPU-6500 (0x68) can share it |
-| D10, D11, D12, D13 | SPI — only when the RFID reader is in use |
-| D3, D5, D6, D9, D10, D11 | PWM-capable — servo, LED brightness, motor speed |
-| D2, D3 | Interrupt-capable — buttons/sensors that must never be missed |
+| D9, D10, D11, D12, D13 | RFID reader — D9 reset + SPI on D10–D13. Free for other uses only when the RFID reader isn't in the project |
+| D3 | Servo signal |
+| D4, D5, D6, D7 | Stepper driver IN1–IN4 |
+| D3, D5, D6, D9, D10, D11 | PWM-capable — LED brightness, motor speed (whichever of these the parts above aren't using) |
+| D2, D3 | Interrupt-capable — buttons/sensors that must never be missed (D2 first; D3 is the servo's default) |
 | A0–A3 | Analog inputs — potentiometer, joystick, photoresistor, thermistor |
 | D0, D1 | Avoid — shared with the board's serial port |
 
@@ -71,7 +73,7 @@ Use these unless the project needs otherwise, so parts don't collide:
 
 **22. RFID reader (RC522) + key fob** ×1 — **3.3V part: power it from the 3.3V pin, never 5V.** SPI wiring: SDA(SS) → D10, SCK → D13, MOSI → D11, MISO → D12, RST → D9, GND → GND, IRQ unconnected. Its data pins are 3.3V logic and this board's are 5V — the classic Uno tutorials connect them directly and it generally works, but it's outside the chip's rating; say so when wiring it. Library: `MFRC522` (its metadata doesn't list this board, so `arduino-cli` warns about compatibility — the warning is expected; it's plain SPI).
 
-**23. DHT11 temperature & humidity module** ×1 — 3 pins: signal, VCC (5V), GND **(read the labels)**. The module has its pull-up resistor built in. Read at most once per second (it returns errors if polled faster). ±2 °C, ±5 % humidity — whole numbers only. Library: `DHT sensor library` (pulls in `Adafruit Unified Sensor`), type `DHT11`.
+**23. DHT11 temperature & humidity module** ×1 — 3 pins: signal, VCC (5V), GND **(read the labels)**. **No external pull-up resistor needed:** this is the 3-pin module version (blue sensor on a small circuit board), which carries its own pull-up resistor on the board — wire signal straight to a digital pin. Online tutorials that add a 10 kΩ resistor are for the bare 4-pin sensor or the DHT22; don't copy that here. (If a student's part is a bare blue sensor with 4 legs and no circuit board, it does need 10 kΩ from signal to 5V.) Read at most once per second (it returns errors if polled faster). ±2 °C, ±5 % humidity — whole numbers only. Library: `DHT sensor library` (pulls in `Adafruit Unified Sensor`), type `DHT11`.
 
 **24. GY-6500 module (MPU-6500 accelerometer + gyroscope)** ×1 — I2C: VCC (module has a 3.3V regulator, accepts 5V **(check on the part)**), GND, SCL → A5, SDA → A4. Address 0x68 (0x69 if AD0 is tied high). Library: `MPU9250_WE` (includes the `MPU6500_WE` class for this chip).
 
@@ -83,9 +85,9 @@ Use these unless the project needs otherwise, so parts don't collide:
 
 ## Motors & Movement
 
-**28. SG90 servo** ×1 — wires: brown = GND, red = 5V, orange = signal → a PWM pin (D9 by default). Turns to 0–180°. Library: `Servo`. Current spikes when it moves can reset the board on USB power — if it jitters or the board restarts, power it from the power supply module (shared GND).
+**28. SG90 servo** ×1 — wires: brown = GND, red = 5V, orange = signal → D3 by default (the `Servo` library works on any digital pin on this board; D3 keeps clear of the RFID reader and stepper). Turns to 0–180°. Library: `Servo`. Current spikes when it moves can reset the board on USB power — if it jitters or the board restarts, power it from the power supply module (shared GND).
 
-**29. 28BYJ-48 stepper motor (5V)** ×1 + **30. ULN2003 driver board** ×1 — the motor's white plug only fits the driver one way. Driver IN1–IN4 → D8–D11, + → 5V (power supply module recommended), − → GND. About 2048 steps per turn; max ~15 RPM. Library `Stepper` — note the pin order quirk: `Stepper(2048, 8, 10, 9, 11)` (IN1, IN3, IN2, IN4). `AccelStepper` (`FULL4WIRE`, same order) for smooth acceleration.
+**29. 28BYJ-48 stepper motor (5V)** ×1 + **30. ULN2003 driver board** ×1 — the motor's white plug only fits the driver one way. Driver IN1–IN4 → D4–D7 (not the D8–D11 of most online tutorials — those collide with the RFID reader's pins), + → 5V (power supply module recommended), − → GND. About 2048 steps per turn; max ~15 RPM. Library `Stepper` — note the pin order quirk: `Stepper(2048, 4, 6, 5, 7)` (IN1, IN3, IN2, IN4). `AccelStepper` (`FULL4WIRE`, same order) for smooth acceleration.
 
 **31. Fan blade + 3–6V DC motor** ×1 — **never connect to a board pin directly.** Drive it through the L293D (speed + direction) or a PN2222 transistor (on/off/speed): transistor base through 1 kΩ to a PWM pin, motor between + supply and collector, emitter to GND, diode across the motor (stripe toward +). Power the motor from the power supply module.
 
