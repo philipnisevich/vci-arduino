@@ -25,6 +25,8 @@ KIT_LIBRARIES=(
   "Servo"               # SG90
   "Stepper"             # 28BYJ-48 + ULN2003
   "AccelStepper"        # 28BYJ-48, smooth motion
+  "ArduinoGraphics"     # text on the built-in LED grid (scroll_name demo)
+  "NTPClient"           # internet time (oled_clock demo)
 )
 
 INSTALL_CORE=1

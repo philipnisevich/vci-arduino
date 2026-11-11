@@ -10,7 +10,7 @@ Board-agnostic guide for Arduino hardware projects, tuned for a workshop that us
 - **`/arduino-hardware install`** — before the workshop, **no board needed**. Installs every tool and download the workshop needs. Never touches a board.
 - **`/arduino-hardware check`** — at the workshop, board plugged in. A quick, **strictly read-only** connection check: is the board there, is it the workshop board, which port is it on. **Never flashes or uploads anything** — the board's factory demo animation must still be playing when this finishes.
 - **`/arduino-hardware setup [board name, product link, or context]`** — the general flow for any *other* board, or when detection is wrong. The argument is optional; pass a name/link when you already know the board or when `arduino-cli`'s USB-ID guess is wrong (e.g. many **Pro Micro** clones reuse the **Arduino Leonardo**'s USB VID/PID, so auto-detection confidently reports the wrong board) — that info then takes priority over the auto-detected guess.
-- **Project work** (default, auto-triggered by general Arduino conversation) — compiling/uploading, clarifying which module/component is meant whenever one comes up, and keeping wiring grounded in real specs.
+- **Project work** (default, auto-triggered by general Arduino conversation) — using the workshop's reference code for the demo projects, compiling/uploading, clarifying which module/component is meant whenever one comes up, and keeping wiring grounded in real specs.
 
 The user is explicitly non-technical about electronics *and* about computers. Never skip a step, question, or safety explanation to "save time" — that's the point of this skill. Never ask them to open a terminal or type a command themselves; you run everything.
 
@@ -183,6 +183,28 @@ Read `.arduino-board.json` in the project root. If it's missing, the board hasn'
 Once the record exists, load the board doc it points to (`reference`) and proceed.
 
 If the user is mid-conversation about a project and the board isn't confirmed yet, it's fine to discuss the project idea in general terms, but hold off on specific pin numbers, voltages, or compile commands until it is.
+
+### Workshop demo sketches — use the reference code
+
+The workshop teaches a fixed set of demo projects, and every student's code should look the same so instructors can help anyone at a glance. The reference code lives in [`references/workshop-sketches/`](references/workshop-sketches/):
+
+| Sketch | What it does | Kit parts | Libraries | What the student changes |
+|---|---|---|---|---|
+| `scroll_name/` | Scrolls a name across the board's built-in red LED grid | Board only, no wiring | `ArduinoGraphics` + `Arduino_LED_Matrix` (built into the core) | The name in `matrix.println("  Philip  ")` |
+| `oled_clock/` | Gets the time from the internet and shows date, time, and PST/PDT on the OLED | 0.96" OLED (SDA → A4, SCL → A5) | `WiFiS3`, `NTPClient`, `Adafruit SSD1306` | Their Wi-Fi name and password in `arduino_secrets.h` |
+
+**Recognize them by intent, not exact wording.** "Show my name on the board", "scroll text on the LED grid", "make the lights spell my name" → `scroll_name`. "Build a clock", "show the time on the screen", "internet clock on the OLED" → `oled_clock`. If it's unclear whether they mean a demo or something different, ask once.
+
+When a request matches a demo:
+
+1. **Copy the reference sketch folder into the project directory as-is** (`./<sketch-name>/`, keeping the folder and file names, and every file in it). Don't write your own version, restructure it, rename variables, or "improve" it — matching code is the whole point.
+2. **Change only the personalization points in the table**, nothing else:
+   - `scroll_name`: ask the student what name (or short text) to scroll and put it in place of `Philip`, keeping the two spaces of padding on each side.
+   - `oled_clock`: ask for their Wi-Fi network name and password and write them into `arduino_secrets.h` between the quotes. Remind them the board only joins **2.4 GHz** networks (many "5G" networks won't work). Don't repeat the password back in chat.
+3. Still do every normal step around it: Step 3 (Wi-Fi firmware — essential before `oled_clock`), Step 5 (show the OLED wiring before they connect anything), and Step 4 (compile and upload).
+4. **Variations build on the reference.** If they want the demo plus something extra ("the clock, but also show the temperature", "scroll my name faster"), start from the reference sketch and add the smallest change on top, keeping its existing structure, names, and comments, so it still looks like everyone else's. Only write from scratch when the project is genuinely different from every demo.
+
+If a compile fails because `ArduinoGraphics` or `NTPClient` is missing (a student who skipped Install mode), install it with `arduino-cli lib install` and retry.
 
 ### Step 2 — Clarify the exact module whenever one comes up
 
