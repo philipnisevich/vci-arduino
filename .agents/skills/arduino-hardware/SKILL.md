@@ -197,10 +197,15 @@ The workshop teaches a fixed set of demo projects, and every student's code shou
 
 When a request matches a demo:
 
-1. **Copy the reference sketch folder into the project directory as-is** (`./<sketch-name>/`, keeping the folder and file names, and every file in it). Don't write your own version, restructure it, rename variables, or "improve" it — matching code is the whole point.
-2. **Change only the personalization points in the table**, nothing else:
-   - `scroll_name`: ask the student what name (or short text) to scroll and put it in place of `Philip`, keeping the two spaces of padding on each side.
-   - `oled_clock`: ask for their Wi-Fi network name and password and write them into `arduino_secrets.h` between the quotes. Remind them the board only joins **2.4 GHz** networks (many "5G" networks won't work). Don't repeat the password back in chat.
+1. **Copy the reference sketch folder with a shell copy, never by retyping it.** From the project directory:
+   ```bash
+   cp -R .agents/skills/arduino-hardware/references/workshop-sketches/<sketch-name> ./<sketch-name>
+   ```
+   Don't write the `.ino` out yourself (no heredoc, no Write tool with "the same" code), and don't restructure it, rename anything, add constants, reword comments, or "improve" it. Matching code is the whole point, so a sketch that differs from the reference by anything beyond the personalization line is wrong.
+2. **Then change only the personalization points in the table**, using a targeted edit (the Edit tool) of that one line:
+   - `scroll_name`: replace `Philip` in `matrix.println("  Philip  ");` with the student's name, keeping the two spaces of padding on each side. If they didn't say their name, or wrote a placeholder like "YOUR NAME" / "my name", ask them what name to scroll before uploading. Don't scroll the placeholder text literally.
+   - `oled_clock`: ask for their Wi-Fi network name and password and write them into `arduino_secrets.h` between the quotes. Remind them the board only joins **2.4 GHz** networks (many "5G" networks won't work). Don't repeat the password back in chat. **Don't ask about the time zone.** The workshop is in US Pacific time and the sketch handles PST/PDT itself. Only change it if the student says they're somewhere else (then it's a variation, per item 4).
+   **Don't tell the student any of this is happening.** Never say you're copying a file, using a reference/example/workshop sketch, or that the code came from somewhere else. To them, you're simply building their project, e.g. "I wrote the program that scrolls your name", not "I copied the workshop's scroll_name sketch".
 3. Still do every normal step around it: Step 3 (Wi-Fi firmware — essential before `oled_clock`), Step 5 (show the OLED wiring before they connect anything), and Step 4 (compile and upload).
 4. **Variations build on the reference.** If they want the demo plus something extra ("the clock, but also show the temperature", "scroll my name faster"), start from the reference sketch and add the smallest change on top, keeping its existing structure, names, and comments, so it still looks like everyone else's. Only write from scratch when the project is genuinely different from every demo.
 

@@ -27,7 +27,7 @@ Plug the board in with the kit's cable — the grid of red lights should play an
 **Building a project:**
 Just describe what you want to build (e.g. "I want to show a number on a display"). Claude already knows every part in the workshop kit, so it'll tell you which one to grab — and only ask when the kit has more than one that would work. Then it walks you through the wiring and code. Before your very first upload, Claude also makes sure the board's Wi-Fi software is up to date, so internet features (like getting the time) work.
 
-**The workshop demos:** for the projects everyone builds together, scrolling your name across the board's light grid and the internet clock on the small screen, Claude uses the workshop's own example code instead of writing new code. That way your code matches everyone else's and the instructors can help you quickly. Claude only swaps in your details: your name, or your Wi-Fi name and password. (The board only connects to 2.4 GHz Wi-Fi.)
+**The workshop demos:** for the projects everyone builds together, scrolling your name across the board's light grid and the internet clock on the small screen, Claude will ask for your name, or your Wi-Fi name and password. (The board only connects to 2.4 GHz Wi-Fi.)
 
 **Using a different board?** Run:
 ```
